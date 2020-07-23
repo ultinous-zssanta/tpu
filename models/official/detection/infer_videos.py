@@ -106,37 +106,34 @@ def main(unused_argv):
     # Create a saver in order to load the pre-trained checkpoint.
     saver = tf.train.Saver()
 
-    boxes = []
     with tf.Session() as sess:
       print(' - Loading the checkpoint...')
       saver.restore(sess, FLAGS.checkpoint_path)
 
-      for i, frame in enumerate(get_frames(FLAGS.video_file)):
-        print(' - Processing image %d...' % i)
+      out_csv_name = "%s.csv" % FLAGS.video_file
+      with open(out_csv_name, "w") as fhan:
+        for i, frame in enumerate(get_frames(FLAGS.video_file)):
+          print(' - Processing image %d...' % i)
 
-        predictions_np = sess.run(
-            predictions, feed_dict={image_raw: frame})
+          predictions_np = sess.run(
+              predictions, feed_dict={image_raw: frame})
 
-        num_detections = int(predictions_np['num_detections'][0])
-        np_boxes = predictions_np['detection_boxes'][0, :num_detections]
-        np_scores = predictions_np['detection_scores'][0, :num_detections]
-        np_classes = predictions_np['detection_classes'][0, :num_detections]
-        np_classes = np_classes.astype(np.int32)
+          num_detections = int(predictions_np['num_detections'][0])
+          np_boxes = predictions_np['detection_boxes'][0, :num_detections]
+          np_scores = predictions_np['detection_scores'][0, :num_detections]
+          np_classes = predictions_np['detection_classes'][0, :num_detections]
+          np_classes = np_classes.astype(np.int32)
 
-        above_thresh = np_scores >= FLAGS.min_score_threshold
-        category_filter = np_classes == FLAGS.target_class_id
-        mask = above_thresh & category_filter
-        np_boxes = np_boxes[mask]
-        np_scores = np_scores[mask]
-        np_classes = np_classes[mask]
-        boxes.append(
-            np.hstack((np_classes[:, np.newaxis], np_boxes.round().astype(np.int32), np_scores[:, np.newaxis])).tolist()
-        )
+          above_thresh = np_scores >= FLAGS.min_score_threshold
+          category_filter = np_classes == FLAGS.target_class_id
+          mask = above_thresh & category_filter
+          np_boxes = np_boxes[mask]
+          np_scores = np_scores[mask]
+          np_classes = np_classes[mask]
 
-    out_csv_name = "%s.csv" % FLAGS.video_file
-    with open(out_csv_name, "w") as fhan:
-      for ind, bbs in enumerate(boxes):
-        fhan.write("%d %s\n" % (ind, " ".join([_bb_to_csv(bb) for bb in bbs])))
+          bbs = np.hstack((np_classes[:, np.newaxis], np_boxes.round().astype(np.int32), np_scores[:, np.newaxis])).tolist()
+          fhan.write("%d %s\n" % (i, " ".join([_bb_to_csv(bb) for bb in bbs])))
+          fhan.flush()
 
 
 if __name__ == '__main__':
