@@ -132,7 +132,6 @@ def main(unused_argv):
         boxes.append(
             np.hstack((np_classes[:, np.newaxis], np_boxes.round().astype(np.int32), np_scores[:, np.newaxis])).tolist()
         )
-        break
 
     out_csv_name = "%s.csv" % FLAGS.video_file
     with open(out_csv_name, "w") as fhan:
